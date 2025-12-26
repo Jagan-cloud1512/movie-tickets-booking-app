@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Login | Movie Booking</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- LOGIN PAGE -->
+    <div class="login-container">
+      <!-- Left panel -->
+      <div class="login-left">
+        <div class="brand">🎬 MovieBook</div>
+        <h1>Welcome back</h1>
+        <p>Please enter your details</p>
+
+        <label class="field-label">Email address</label>
+        <input
+          id="email"
+          class="input"
+          type="text"
+          placeholder="Enter your email"
+        />
+
+        <label class="field-label">Password</label>
+        <input
+          id="password"
+          class="input"
+          type="password"
+          placeholder="Enter your password"
+        />
+
+        <div class="row">
+          <label class="checkbox">
+            <input type="checkbox" /> Remember for 30 days
+          </label>
+          <a href="#" class="link">Forgot password</a>
+        </div>
+
+        <button class="btn primary" onclick="login()">Sign in</button>
+        <button class="btn outline" onclick="showRegister()">Sign up</button>
+
+        <p class="hint">
+          Demo admin login: <strong>intern</strong> / <strong>project</strong>
+        </p>
+      </div>
+
+      <!-- Right panel -->
+      <div class="login-right">
+        <div class="illustration-card">
+          <div class="illustration-circle"></div>
+          <div class="illustration-person"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIGNUP MODAL -->
+    <div id="signupModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="hideRegister()">&times;</span>
+        <h2>Create account</h2>
+        <input id="regEmail" class="input" type="text" placeholder="Email" />
+        <input
+          id="regPassword"
+          class="input"
+          type="password"
+          placeholder="Password"
+        />
+        <button class="btn primary" onclick="register()">Sign up</button>
+      </div>
+    </div>
+
+    <!-- USER BOOKING PAGE (shown only when role === 'user') -->
+    <div id="userPage" style="display: none"></div>
+
+    <!-- ADMIN PAGE (shown only when role === 'admin') -->
+    <div id="adminPage" style="display: none"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
