@@ -1,9 +1,9 @@
 import express from "express";
-import { pool } from "../db.js"; // ← ADD THIS LINE
+import { pool } from "../db.js"; // ← Database connection
 
 const router = express.Router();
 
-// -------- MOVIES (IN-MEMORY for demo - resets OK) --------
+// -------- MOVIES & BOOKINGS (IN-MEMORY - demo friendly) --------
 let movies = [
   {
     id: 1,
@@ -42,16 +42,30 @@ let movies = [
       { id: 9, time: "7:45 PM", seats: 40, available: true },
     ],
   },
+  {
+    id: 6,
+    title: "John Wick: Chapter 4",
+    slots: [{ id: 10, time: "9:00 PM", seats: 30, available: true }],
+  },
+  {
+    id: 7,
+    title: "The Super Mario Bros. Movie",
+    slots: [
+      { id: 11, time: "3:00 PM", seats: 70, available: true },
+      { id: 12, time: "6:00 PM", seats: 50, available: true },
+    ],
+  },
 ];
 
 let bookings = [];
 
-// -------- USERS FROM DATABASE (PERMANENT) --------
+// -------- AUTH: USERS FROM 'us' TABLE (PERMANENT) --------
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password)
+  if (!email || !password) {
     return res.status(400).json({ error: "Email and password required" });
+  }
 
   try {
     const result = await pool.query(
@@ -73,11 +87,11 @@ router.post("/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT id, email, password, role FROM users WHERE email = $1",
+      "SELECT id, email, password, role FROM us WHERE email = $1",
       [email]
     );
-    const user = result.rows[0];
 
+    const user = result.rows[0];
     if (user && user.password === password) {
       return res.json({
         token: user.email,
@@ -93,11 +107,17 @@ router.post("/login", async (req, res) => {
 });
 
 // -------- MOVIES & BOOKINGS --------
-router.get("/", (req, res) => res.json(movies));
-router.get("/bookings", (req, res) => res.json(bookings));
+router.get("/", (req, res) => {
+  res.json(movies);
+});
+
+router.get("/bookings", (req, res) => {
+  res.json(bookings);
+});
 
 router.post("/book", (req, res) => {
   const { slotId, seats, email } = req.body;
+
   const movie = movies.find((m) => m.slots.find((s) => s.id === slotId));
   const slot = movie?.slots.find((s) => s.id === slotId);
 
