@@ -1,9 +1,9 @@
 import express from "express";
-import { pool } from "../db.js"; // ← Database connection
+import { pool } from "../db.js";
 
 const router = express.Router();
 
-// -------- MOVIES & BOOKINGS (IN-MEMORY - demo friendly) --------
+// -------- MOVIES & BOOKINGS (IN-MEMORY) --------
 let movies = [
   {
     id: 1,
@@ -59,7 +59,17 @@ let movies = [
 
 let bookings = [];
 
-// -------- AUTH: USERS FROM 'us' TABLE (PERMANENT) --------
+// -------- TEST DB CONNECTION --------
+router.get("/test-db", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW()");
+    res.json({ connected: true, time: result.rows[0].now });
+  } catch (error) {
+    res.status(500).json({ connected: false, error: error.message });
+  }
+});
+
+// -------- REGISTER (US TABLE) --------
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
@@ -72,16 +82,22 @@ router.post("/register", async (req, res) => {
       "INSERT INTO us (email, password, role) VALUES ($1, $2, 'user') RETURNING email, role",
       [email, password]
     );
-    res.json({ user: result.rows[0] });
+    res.json({ user: result.rows[0], message: "Registered successfully" });
   } catch (error) {
+    console.error("Register error:", error);
     if (error.code === "23505") {
       res.status(400).json({ error: "User already exists" });
+    } else if (error.code === "42P01") {
+      res
+        .status(500)
+        .json({ error: "Table 'us' not found. Create table first." });
     } else {
-      res.status(500).json({ error: "Registration failed" });
+      res.status(500).json({ error: `Registration failed: ${error.message}` });
     }
   }
 });
 
+// -------- LOGIN (US TABLE) --------
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -107,17 +123,11 @@ router.post("/login", async (req, res) => {
 });
 
 // -------- MOVIES & BOOKINGS --------
-router.get("/", (req, res) => {
-  res.json(movies);
-});
-
-router.get("/bookings", (req, res) => {
-  res.json(bookings);
-});
+router.get("/", (req, res) => res.json(movies));
+router.get("/bookings", (req, res) => res.json(bookings));
 
 router.post("/book", (req, res) => {
   const { slotId, seats, email } = req.body;
-
   const movie = movies.find((m) => m.slots.find((s) => s.id === slotId));
   const slot = movie?.slots.find((s) => s.id === slotId);
 
