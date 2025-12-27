@@ -97,10 +97,20 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// -------- LOGIN (US TABLE) --------
+// -------- UPDATED LOGIN (HYBRID - ADMIN ALWAYS WORKS) --------
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
+  // ✅ ADMIN ALWAYS WORKS (no DB needed)
+  if (email === "admin@example.com" && password === "admin123") {
+    return res.json({
+      token: "admin-token",
+      role: "admin",
+      email: "admin@example.com",
+    });
+  }
+
+  // Try DB users (fails silently if no DB)
   try {
     const result = await pool.query(
       "SELECT id, email, password, role FROM us WHERE email = $1",
@@ -117,6 +127,7 @@ router.post("/login", async (req, res) => {
     }
   } catch (error) {
     console.error("Login error:", error);
+    // DB fails silently - admin still works above
   }
 
   res.status(401).json({ error: "Invalid credentials" });
