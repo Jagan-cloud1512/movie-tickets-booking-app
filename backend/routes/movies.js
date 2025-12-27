@@ -59,7 +59,7 @@ let movies = [
 
 let bookings = [];
 
-// -------- TEST DB CONNECTION --------
+// -------- TEST DB (REMOVE AFTER TESTING) --------
 router.get("/test-db", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
@@ -69,39 +69,19 @@ router.get("/test-db", async (req, res) => {
   }
 });
 
-// -------- REGISTER (US TABLE) --------
-router.post("/register", async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password required" });
-  }
-
-  try {
-    const result = await pool.query(
-      "INSERT INTO us (email, password, role) VALUES ($1, $2, 'user') RETURNING email, role",
-      [email, password]
-    );
-    res.json({ user: result.rows[0], message: "Registered successfully" });
-  } catch (error) {
-    console.error("Register error:", error);
-    if (error.code === "23505") {
-      res.status(400).json({ error: "User already exists" });
-    } else if (error.code === "42P01") {
-      res
-        .status(500)
-        .json({ error: "Table 'us' not found. Create table first." });
-    } else {
-      res.status(500).json({ error: `Registration failed: ${error.message}` });
-    }
-  }
+// -------- REGISTER (DISABLED FOR DEMO) --------
+router.post("/register", (req, res) => {
+  res.status(501).json({
+    error: "Registration disabled for demo",
+    use: "admin@example.com / admin123",
+  });
 });
 
-// -------- UPDATED LOGIN (HYBRID - ADMIN ALWAYS WORKS) --------
+// -------- LOGIN (HYBRID - ADMIN ALWAYS WORKS) --------
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  // ✅ ADMIN ALWAYS WORKS (no DB needed)
+  // ✅ ADMIN ALWAYS WORKS
   if (email === "admin@example.com" && password === "admin123") {
     return res.json({
       token: "admin-token",
@@ -110,13 +90,12 @@ router.post("/login", async (req, res) => {
     });
   }
 
-  // Try DB users (fails silently if no DB)
+  // Try DB users (optional)
   try {
     const result = await pool.query(
       "SELECT id, email, password, role FROM us WHERE email = $1",
       [email]
     );
-
     const user = result.rows[0];
     if (user && user.password === password) {
       return res.json({
@@ -126,8 +105,7 @@ router.post("/login", async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Login error:", error);
-    // DB fails silently - admin still works above
+    // Silent fail - admin works anyway
   }
 
   res.status(401).json({ error: "Invalid credentials" });
