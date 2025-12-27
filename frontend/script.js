@@ -1,5 +1,6 @@
 let currentUser = null;
-const API_BASE = "/api/movies";
+// point directly to backend deployment
+const API_BASE = "https://movie-tickets-booking-app-zcrx.vercel.app/api/movies";
 
 // ---------- AUTH MODAL ----------
 
