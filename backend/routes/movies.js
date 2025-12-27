@@ -1,16 +1,16 @@
 import express from "express";
-import { pool } from "../db.js"; // ADD THIS LINE - your DB connection
 
 const router = express.Router();
 
-// -------- HARD-CODED ADMIN (IN-MEMORY) --------
-const ADMIN_USER = {
-  email: "admin@example.com",
-  password: "admin123",
-  role: "admin",
-};
+// -------- IN-MEMORY USERS (NO DB) --------
+// demo users for login
+const users = [
+  { email: "admin@example.com", password: "admin123", role: "admin" },
+  { email: "user@example.com", password: "user123", role: "user" },
+];
 
 // -------- MOVIES & BOOKINGS (IN-MEMORY) --------
+
 let movies = [
   {
     id: 1,
@@ -66,70 +66,45 @@ let movies = [
 
 let bookings = [];
 
-// -------- AUTH: ADMIN (MEMORY) + USERS (DATABASE) --------
-router.post("/register", async (req, res) => {
-  const { email, password } = req.body;
+// -------- AUTH (NO DATABASE) --------
 
+// register new user (stored in memory only)
+router.post("/register", (req, res) => {
+  const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password required" });
   }
 
-  // Block admin registration
-  if (email === ADMIN_USER.email) {
-    return res.status(400).json({ error: "Admin account already exists" });
+  const existing = users.find((u) => u.email === email);
+  if (existing) {
+    return res.status(400).json({ error: "User already exists" });
   }
 
-  try {
-    const result = await pool.query(
-      "INSERT INTO users (email, password, role) VALUES ($1, $2, 'user') RETURNING email, role",
-      [email, password]
-    );
-    res.json({ user: result.rows[0] });
-  } catch (error) {
-    if (error.code === "23505") {
-      res.status(400).json({ error: "User already exists" });
-    } else {
-      res.status(500).json({ error: "Registration failed" });
-    }
-  }
+  const newUser = { email, password, role: "user" };
+  users.push(newUser);
+
+  res.json({ user: { email: newUser.email, role: newUser.role } });
 });
 
-router.post("/login", async (req, res) => {
+// login against in-memory users
+router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  // FIRST: Check hard-coded admin
-  if (email === ADMIN_USER.email && password === ADMIN_USER.password) {
-    return res.json({
-      token: ADMIN_USER.email,
-      role: ADMIN_USER.role,
-      email: ADMIN_USER.email,
-    });
+  const user = users.find((u) => u.email === email && u.password === password);
+
+  if (!user) {
+    return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  // THEN: Check database users
-  try {
-    const result = await pool.query(
-      "SELECT id, email, password, role FROM users WHERE email = $1",
-      [email]
-    );
-
-    const user = result.rows[0];
-    if (user && user.password === password) {
-      return res.json({
-        token: user.email,
-        role: user.role,
-        email: user.email,
-      });
-    }
-  } catch (error) {
-    console.error("Login error:", error);
-  }
-
-  // If neither admin nor DB user found
-  res.status(401).json({ error: "Invalid credentials" });
+  res.json({
+    token: user.email, // simple token placeholder
+    role: user.role,
+    email: user.email,
+  });
 });
 
-// -------- MOVIES / BOOKINGS (UNCHANGED) --------
+// -------- MOVIES / BOOKINGS --------
+
 router.get("/", (req, res) => {
   res.json(movies);
 });
