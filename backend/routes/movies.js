@@ -59,7 +59,7 @@ let movies = [
 
 let bookings = [];
 
-// -------- USERS ONLY (DATABASE - PERMANENT) --------
+// -------- USERS ONLY (DATABASE - PERMANENT) - FIXED TABLE NAME --------
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
@@ -69,15 +69,20 @@ router.post("/register", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "INSERT INTO MS (email, password, role) VALUES ($1, $2, 'user') RETURNING id, email, role",
+      "INSERT INTO us (email, password, role) VALUES ($1, $2, 'user') RETURNING id, email, role",
       [email, password]
     );
     res.json({ user: result.rows[0], message: "Registered successfully" });
   } catch (error) {
+    console.error("Register error:", error);
     if (error.code === "23505") {
       res.status(400).json({ error: "User already exists" });
+    } else if (error.code === "42P01") {
+      res
+        .status(500)
+        .json({ error: "Table 'us' not found. Create table first." });
     } else {
-      res.status(500).json({ error: "Registration failed" });
+      res.status(500).json({ error: `Registration failed: ${error.message}` });
     }
   }
 });
@@ -87,7 +92,7 @@ router.post("/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT id, email, password, role FROM MS WHERE email = $1",
+      "SELECT id, email, password, role FROM us WHERE email = $1",
       [email]
     );
 
