@@ -148,5 +148,13 @@ router.post("/book", (req, res) => {
     res.status(400).json({ error: "Slot unavailable or not enough seats" });
   }
 });
+router.get("/test-db", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW()");
+    res.json({ connected: true, time: result.rows[0].now });
+  } catch (error) {
+    res.json({ connected: false, error: error.message });
+  }
+});
 
 export default router;
