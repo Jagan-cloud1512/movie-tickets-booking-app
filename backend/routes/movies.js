@@ -69,7 +69,7 @@ router.post("/register", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "INSERT INTO us (email, password, role) VALUES ($1, $2, 'user') RETURNING id, email, role",
+      "INSERT INTO MS (email, password, role) VALUES ($1, $2, 'user') RETURNING id, email, role",
       [email, password]
     );
     res.json({ user: result.rows[0], message: "Registered successfully" });
@@ -87,7 +87,7 @@ router.post("/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT id, email, password, role FROM us WHERE email = $1",
+      "SELECT id, email, password, role FROM MS WHERE email = $1",
       [email]
     );
 
