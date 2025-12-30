@@ -1,5 +1,4 @@
 let currentUser = null;
-// FIXED - Correct backend URL + /api/movies path
 const API_BASE =
   "https://movie-tickets-booking-app-pif3-8zivgcj0g.vercel.app/api/movies";
 
@@ -10,7 +9,6 @@ function hideRegister() {
   document.getElementById("signupModal").style.display = "none";
 }
 
-// LOGIN (FIXED)
 async function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
@@ -35,11 +33,10 @@ async function login() {
     }
   } catch (err) {
     console.error(err);
-    alert("Server error. Is backend running?");
+    alert("Server error");
   }
 }
 
-// REGISTER (FIXED)
 async function register() {
   const email = document.getElementById("regEmail").value.trim();
   const password = document.getElementById("regPassword").value.trim();
@@ -62,109 +59,6 @@ async function register() {
   }
 }
 
-// USER MOVIES (FIXED)
-async function loadMoviesForUser() {
-  try {
-    const res = await fetch(`${API_BASE}`); // GET /api/movies
-    const movies = await res.json();
-
-    const container = document.getElementById("userMoviesList");
-    container.innerHTML = movies
-      .map(
-        (m) => `
-        <div class="movie-card">
-          <div class="movie-card-header">
-            <h4>${m.title}</h4>
-            <span class="movie-tag">Now showing</span>
-          </div>
-          ${m.slots
-            .map(
-              (s) => `
-            <div class="slot-row">
-              <span>${s.time} · ${s.seats} seats left</span>
-              <button class="btn small"
-                ${
-                  s.available ? `onclick="userSelectSlot(${s.id})"` : "disabled"
-                }>
-                ${s.available ? "Book" : "Full"}
-              </button>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-      `
-      )
-      .join("");
-  } catch (err) {
-    console.error(err);
-    alert("Unable to load movies");
-  }
-}
-
-// BOOKING (FIXED)
-async function userConfirmBooking() {
-  if (!currentUser) return alert("Please login again");
-
-  const slotId = parseInt(document.getElementById("userSlotSelect").value, 10);
-  const seats = parseInt(document.getElementById("userSeatsInput").value, 10);
-  if (!slotId || !seats || seats < 1) {
-    return alert("Select a slot and valid seats");
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/book`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        slotId,
-        seats,
-        email: currentUser.email,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) return alert(data.error || "Booking failed");
-
-    alert(data.message);
-    document.getElementById("userBookingForm").style.display = "none";
-    await loadMoviesForUser();
-  } catch (err) {
-    console.error(err);
-    alert("Server error while booking");
-  }
-}
-
-// ADMIN BOOKINGS (FIXED)
-async function loadBookingsForAdmin() {
-  try {
-    const res = await fetch(`${API_BASE}/bookings`);
-    const all = await res.json();
-
-    const container = document.getElementById("adminBookingsList");
-    if (!all.length) {
-      container.innerHTML = "<p>No bookings yet.</p>";
-      return;
-    }
-
-    container.innerHTML = all
-      .map(
-        (b) => `
-        <div class="booking-row">
-          <strong>${b.movie}</strong> — ${b.seats} seats — Slot ${b.slotId}<br/>
-          <span class="booking-meta">
-            ${b.email} · ${b.time}
-          </span>
-        </div>
-      `
-      )
-      .join("");
-  } catch (err) {
-    console.error(err);
-    alert("Unable to load bookings");
-  }
-}
-
-// ... rest of your functions stay the same (showUserPage, showAdminPage, etc)
 function hideLoginUI() {
   document.querySelector(".login-container").style.display = "none";
   document.getElementById("signupModal").style.display = "none";
@@ -210,15 +104,83 @@ function showUserPage() {
               <label>Seats</label>
               <input id="userSeatsInput" class="input" type="number" min="1" max="10" value="1" />
             </div>
-            <button class="btn primary" style="margin-top:10px;" onclick="userConfirmBooking()">
-              Confirm booking
-            </button>
+            <button class="btn primary" style="margin-top:10px;" onclick="userConfirmBooking()">Confirm booking</button>
           </div>
         </div>
       </div>
     </div>
   `;
   loadMoviesForUser();
+}
+
+async function loadMoviesForUser() {
+  try {
+    const res = await fetch(API_BASE); // GET /api/movies
+    const movies = await res.json();
+
+    const container = document.getElementById("userMoviesList");
+    container.innerHTML = movies
+      .map(
+        (m) => `
+      <div class="movie-card">
+        <div class="movie-card-header">
+          <h4>${m.title}</h4>
+          <span class="movie-tag">Now showing</span>
+        </div>
+        ${m.slots
+          .map(
+            (s) => `
+          <div class="slot-row">
+            <span>${s.time} · ${s.seats} seats left</span>
+            <button class="btn small" ${
+              s.available ? `onclick="userSelectSlot(${s.id})"` : "disabled"
+            }>
+              ${s.available ? "Book" : "Full"}
+            </button>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    `
+      )
+      .join("");
+  } catch (err) {
+    console.error(err);
+    alert("Unable to load movies");
+  }
+}
+
+function userSelectSlot(slotId) {
+  const select = document.getElementById("userSlotSelect");
+  select.innerHTML = `<option value="${slotId}">Slot ${slotId}</option>`;
+  document.getElementById("userBookingForm").style.display = "block";
+}
+
+async function userConfirmBooking() {
+  if (!currentUser) return alert("Please login again");
+
+  const slotId = parseInt(document.getElementById("userSlotSelect").value, 10);
+  const seats = parseInt(document.getElementById("userSeatsInput").value, 10);
+  if (!slotId || !seats || seats < 1)
+    return alert("Select a slot and valid seats");
+
+  try {
+    const res = await fetch(`${API_BASE}/book`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slotId, seats, email: currentUser.email }),
+    });
+    const data = await res.json();
+    if (!res.ok) return alert(data.error || "Booking failed");
+
+    alert(data.message);
+    document.getElementById("userBookingForm").style.display = "none";
+    await loadMoviesForUser();
+  } catch (err) {
+    console.error(err);
+    alert("Server error while booking");
+  }
 }
 
 function showAdminPage() {
@@ -252,10 +214,31 @@ function showAdminPage() {
   loadBookingsForAdmin();
 }
 
-function userSelectSlot(slotId) {
-  const select = document.getElementById("userSlotSelect");
-  select.innerHTML = `<option value="${slotId}">Slot ${slotId}</option>`;
-  document.getElementById("userBookingForm").style.display = "block";
+async function loadBookingsForAdmin() {
+  try {
+    const res = await fetch(`${API_BASE}/bookings`);
+    const all = await res.json();
+
+    const container = document.getElementById("adminBookingsList");
+    if (!all.length) {
+      container.innerHTML = "<p>No bookings yet.</p>";
+      return;
+    }
+
+    container.innerHTML = all
+      .map(
+        (b) => `
+      <div class="booking-row">
+        <strong>${b.movie}</strong> — ${b.seats} seats — Slot ${b.slotId}<br/>
+        <span class="booking-meta">${b.email} · ${b.time}</span>
+      </div>
+    `
+      )
+      .join("");
+  } catch (err) {
+    console.error(err);
+    alert("Unable to load bookings");
+  }
 }
 
 window.addEventListener("load", () => {
