@@ -1,0 +1,8 @@
+{
+  "name": "movie-app",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend && echo 'Static files ready'"
+  },
+  "dependencies": {}
+}

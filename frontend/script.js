@@ -1,8 +1,6 @@
 let currentUser = null;
 // point directly to backend deployment
-const API_BASE = "https://movie-backend-2.vercel.app/api/movies";
-
-// ---------- AUTH MODAL ----------
+const API_BASE = "/api/movies";
 
 function showRegister() {
   document.getElementById("signupModal").style.display = "flex";
