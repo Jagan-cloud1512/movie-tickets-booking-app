@@ -1,15 +1,16 @@
 import express from "express";
-import fs from "fs/promises";
 
 const router = express.Router();
 
 // -------- IN-MEMORY USERS (NO DB) --------
+// demo users for login
 const users = [
   { email: "admin@example.com", password: "admin123", role: "admin" },
   { email: "user@example.com", password: "user123", role: "user" },
 ];
 
-// -------- MOVIES (STATIC) --------
+// -------- MOVIES & BOOKINGS (IN-MEMORY) --------
+
 let movies = [
   {
     id: 1,
@@ -63,34 +64,11 @@ let movies = [
   },
 ];
 
-// -------- PERSISTENT BOOKINGS (FILE STORAGE) --------
 let bookings = [];
 
-// LOAD BOOKINGS FROM FILE ON STARTUP
-async function loadBookings() {
-  try {
-    const data = await fs.readFile("./bookings.json", "utf8");
-    bookings = JSON.parse(data);
-    console.log(`Loaded ${bookings.length} bookings`);
-  } catch (error) {
-    console.log("No bookings file found, starting fresh");
-    bookings = [];
-  }
-}
-
-// SAVE BOOKINGS TO FILE
-async function saveBookings() {
-  try {
-    await fs.writeFile("./bookings.json", JSON.stringify(bookings, null, 2));
-  } catch (error) {
-    console.error("Failed to save bookings:", error);
-  }
-}
-
-// INIT BOOKINGS ON STARTUP
-loadBookings();
-
 // -------- AUTH (NO DATABASE) --------
+
+// register new user (stored in memory only)
 router.post("/register", (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -108,6 +86,7 @@ router.post("/register", (req, res) => {
   res.json({ user: { email: newUser.email, role: newUser.role } });
 });
 
+// login against in-memory users
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -118,45 +97,40 @@ router.post("/login", (req, res) => {
   }
 
   res.json({
-    token: user.email,
+    token: user.email, // simple token placeholder
     role: user.role,
     email: user.email,
   });
 });
 
 // -------- MOVIES / BOOKINGS --------
+
 router.get("/", (req, res) => {
   res.json(movies);
 });
 
 router.get("/bookings", (req, res) => {
-  res.json(bookings); // NOW SHOWS PERSISTENT BOOKINGS!
+  res.json(bookings);
 });
 
-router.post("/book", async (req, res) => {
+router.post("/book", (req, res) => {
   const { slotId, seats, email } = req.body;
 
   const movie = movies.find((m) => m.slots.find((s) => s.id === slotId));
   const slot = movie?.slots.find((s) => s.id === slotId);
 
   if (slot && slot.seats >= seats && slot.available) {
-    // UPDATE SEATS
     slot.seats -= seats;
     if (slot.seats <= 0) slot.available = false;
 
-    // ADD BOOKING
-    const booking = {
+    bookings.push({
       id: Date.now(),
       email,
       movie: movie.title,
       slotId,
       seats,
       time: new Date().toLocaleString(),
-    };
-    bookings.push(booking);
-
-    // SAVE TO FILE (PERSISTENT!)
-    await saveBookings();
+    });
 
     res.json({
       success: true,
