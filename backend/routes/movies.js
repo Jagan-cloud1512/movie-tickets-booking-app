@@ -1,9 +1,16 @@
 import express from "express";
-import { pool } from "../db.js";
 
 const router = express.Router();
 
-// -------- MOVIES & BOOKINGS (IN-MEMORY - Demo friendly) --------
+// -------- IN-MEMORY USERS (NO DB) --------
+// demo users for login
+const users = [
+  { email: "admin@example.com", password: "admin123", role: "admin" },
+  { email: "user@example.com", password: "user123", role: "user" },
+];
+
+// -------- MOVIES & BOOKINGS (IN-MEMORY) --------
+
 let movies = [
   {
     id: 1,
@@ -59,64 +66,49 @@ let movies = [
 
 let bookings = [];
 
-// -------- USERS ONLY (DATABASE - PERMANENT) - FIXED TABLE NAME --------
-router.post("/register", async (req, res) => {
-  const { email, password } = req.body;
+// -------- AUTH (NO DATABASE) --------
 
+// register new user (stored in memory only)
+router.post("/register", (req, res) => {
+  const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password required" });
   }
 
-  try {
-    const result = await pool.query(
-      "INSERT INTO us (email, password, role) VALUES ($1, $2, 'user') RETURNING id, email, role",
-      [email, password]
-    );
-    res.json({ user: result.rows[0], message: "Registered successfully" });
-  } catch (error) {
-    console.error("Register error:", error);
-    if (error.code === "23505") {
-      res.status(400).json({ error: "User already exists" });
-    } else if (error.code === "42P01") {
-      res
-        .status(500)
-        .json({ error: "Table 'us' not found. Create table first." });
-    } else {
-      res.status(500).json({ error: `Registration failed: ${error.message}` });
-    }
+  const existing = users.find((u) => u.email === email);
+  if (existing) {
+    return res.status(400).json({ error: "User already exists" });
   }
+
+  const newUser = { email, password, role: "user" };
+  users.push(newUser);
+
+  res.json({ user: { email: newUser.email, role: newUser.role } });
 });
 
-router.post("/login", async (req, res) => {
+// login against in-memory users
+router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  try {
-    const result = await pool.query(
-      "SELECT id, email, password, role FROM us WHERE email = $1",
-      [email]
-    );
+  const user = users.find((u) => u.email === email && u.password === password);
 
-    const user = result.rows[0];
-    if (user && user.password === password) {
-      return res.json({
-        token: user.email,
-        role: user.role,
-        email: user.email,
-      });
-    }
-  } catch (error) {
-    console.error("Login error:", error);
+  if (!user) {
+    return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  res.status(401).json({ error: "Invalid credentials" });
+  res.json({
+    token: user.email, // simple token placeholder
+    role: user.role,
+    email: user.email,
+  });
 });
 
-// -------- MOVIES (IN-MEMORY) --------
+// -------- MOVIES / BOOKINGS --------
+
 router.get("/", (req, res) => {
   res.json(movies);
 });
 
-// -------- BOOKINGS (IN-MEMORY - Resets on redeploy) --------
 router.get("/bookings", (req, res) => {
   res.json(bookings);
 });
@@ -146,14 +138,6 @@ router.post("/book", (req, res) => {
     });
   } else {
     res.status(400).json({ error: "Slot unavailable or not enough seats" });
-  }
-});
-router.get("/test-db", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT NOW()");
-    res.json({ connected: true, time: result.rows[0].now });
-  } catch (error) {
-    res.json({ connected: false, error: error.message });
   }
 });
 
