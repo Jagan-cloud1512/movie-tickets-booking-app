@@ -1,6 +1,6 @@
 let currentUser = null;
-const API_BASE =
-  "https://movie-tickets-booking-app-pif3-8zivgcj0g.vercel.app/api/movies";
+// point directly to backend deployment
+const API_BASE = "hhttps://movie-tickets-booking-app-pif3-8zivgcj0g.vercel.app";
 
 function showRegister() {
   document.getElementById("signupModal").style.display = "flex";
@@ -8,6 +8,8 @@ function showRegister() {
 function hideRegister() {
   document.getElementById("signupModal").style.display = "none";
 }
+
+// ---------- LOGIN ----------
 
 async function login() {
   const email = document.getElementById("email").value.trim();
@@ -23,7 +25,7 @@ async function login() {
     const data = await res.json();
     if (!res.ok) return alert(data.error || "Invalid credentials");
 
-    currentUser = data;
+    currentUser = data; // { email, role, token }
     localStorage.setItem("user", JSON.stringify(data));
 
     if (currentUser.role === "admin") {
@@ -33,9 +35,11 @@ async function login() {
     }
   } catch (err) {
     console.error(err);
-    alert("Server error");
+    alert("Server error. Is backend running?");
   }
 }
+
+// ---------- REGISTER ----------
 
 async function register() {
   const email = document.getElementById("regEmail").value.trim();
@@ -59,6 +63,8 @@ async function register() {
   }
 }
 
+// ---------- COMMON HELPERS ----------
+
 function hideLoginUI() {
   document.querySelector(".login-container").style.display = "none";
   document.getElementById("signupModal").style.display = "none";
@@ -72,11 +78,15 @@ function logout() {
   window.location.reload();
 }
 
+// ---------- USER PAGE (BOOKING ONLY) ----------
+
 function showUserPage() {
   hideLoginUI();
+
   const userPage = document.getElementById("userPage");
   const adminPage = document.getElementById("adminPage");
   adminPage.style.display = "none";
+
   userPage.style.display = "block";
   userPage.innerHTML = `
     <div class="dashboard">
@@ -90,10 +100,12 @@ function showUserPage() {
         </div>
         <button class="btn outline small" onclick="logout()">Logout</button>
       </div>
+
       <div class="dash-body">
         <div class="dash-left">
           <p class="dash-section-title">Choose your movie and showtime</p>
           <div id="userMoviesList" class="movie-list"></div>
+
           <div id="userBookingForm" class="booking-panel" style="display:none;">
             <h4>Book tickets</h4>
             <div style="margin-top:6px;">
@@ -104,18 +116,23 @@ function showUserPage() {
               <label>Seats</label>
               <input id="userSeatsInput" class="input" type="number" min="1" max="10" value="1" />
             </div>
-            <button class="btn primary" style="margin-top:10px;" onclick="userConfirmBooking()">Confirm booking</button>
+            <button class="btn primary" style="margin-top:10px;" onclick="userConfirmBooking()">
+              Confirm booking
+            </button>
           </div>
         </div>
+
+        <!-- no right panel for user (cannot see who booked) -->
       </div>
     </div>
   `;
+
   loadMoviesForUser();
 }
 
 async function loadMoviesForUser() {
   try {
-    const res = await fetch(API_BASE); // GET /api/movies
+    const res = await fetch(API_BASE);
     const movies = await res.json();
 
     const container = document.getElementById("userMoviesList");
@@ -132,9 +149,8 @@ async function loadMoviesForUser() {
             (s) => `
           <div class="slot-row">
             <span>${s.time} · ${s.seats} seats left</span>
-            <button class="btn small" ${
-              s.available ? `onclick="userSelectSlot(${s.id})"` : "disabled"
-            }>
+            <button class="btn small"
+              ${s.available ? `onclick="userSelectSlot(${s.id})"` : "disabled"}>
               ${s.available ? "Book" : "Full"}
             </button>
           </div>
@@ -162,14 +178,19 @@ async function userConfirmBooking() {
 
   const slotId = parseInt(document.getElementById("userSlotSelect").value, 10);
   const seats = parseInt(document.getElementById("userSeatsInput").value, 10);
-  if (!slotId || !seats || seats < 1)
+  if (!slotId || !seats || seats < 1) {
     return alert("Select a slot and valid seats");
+  }
 
   try {
     const res = await fetch(`${API_BASE}/book`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotId, seats, email: currentUser.email }),
+      body: JSON.stringify({
+        slotId,
+        seats,
+        email: currentUser.email,
+      }),
     });
     const data = await res.json();
     if (!res.ok) return alert(data.error || "Booking failed");
@@ -183,11 +204,15 @@ async function userConfirmBooking() {
   }
 }
 
+// ---------- ADMIN PAGE (SEE WHO BOOKED WHAT) ----------
+
 function showAdminPage() {
   hideLoginUI();
+
   const userPage = document.getElementById("userPage");
   const adminPage = document.getElementById("adminPage");
   userPage.style.display = "none";
+
   adminPage.style.display = "block";
   adminPage.innerHTML = `
     <div class="dashboard">
@@ -201,6 +226,7 @@ function showAdminPage() {
         </div>
         <button class="btn outline small" onclick="logout()">Logout</button>
       </div>
+
       <div class="dash-body">
         <div class="dash-left">
           <div class="side-card">
@@ -211,6 +237,7 @@ function showAdminPage() {
       </div>
     </div>
   `;
+
   loadBookingsForAdmin();
 }
 
@@ -228,11 +255,13 @@ async function loadBookingsForAdmin() {
     container.innerHTML = all
       .map(
         (b) => `
-      <div class="booking-row">
-        <strong>${b.movie}</strong> — ${b.seats} seats — Slot ${b.slotId}<br/>
-        <span class="booking-meta">${b.email} · ${b.time}</span>
-      </div>
-    `
+        <div class="booking-row">
+          <strong>${b.movie}</strong> — ${b.seats} seats — Slot ${b.slotId}<br/>
+          <span class="booking-meta">
+            ${b.email} · ${b.time}
+          </span>
+        </div>
+      `
       )
       .join("");
   } catch (err) {
@@ -241,10 +270,13 @@ async function loadBookingsForAdmin() {
   }
 }
 
+// ---------- AUTO-LOGIN ON REFRESH ----------
+
 window.addEventListener("load", () => {
   const saved = localStorage.getItem("user");
   if (!saved) return;
   currentUser = JSON.parse(saved);
+
   if (currentUser.role === "admin") {
     showAdminPage();
   } else {
