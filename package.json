@@ -1,8 +1,10 @@
 {
-  "name": "movie-app",
+  "name": "movie-booking-app",
   "version": "1.0.0",
   "scripts": {
-    "build": "cd frontend && echo 'Static files ready'"
+    "dev": "cd backend && npm run dev",
+    "build": "echo 'Ready for Vercel'",
+    "start": "cd backend && npm start"
   },
   "dependencies": {}
 }

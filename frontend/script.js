@@ -1,6 +1,6 @@
 let currentUser = null;
 // point directly to backend deployment
-const API_BASE = "hhttps://movie-tickets-booking-app-pif3-8zivgcj0g.vercel.app";
+const API_BASE = "/api/movies";
 
 function showRegister() {
   document.getElementById("signupModal").style.display = "flex";
